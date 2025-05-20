@@ -64,6 +64,10 @@ export class JSONGenerator {
                 else
                     return {};
             case "bool":
+                if (v.numRange) {
+                    const rand = Math.random();
+                    return rand >= v.numRange[0] && rand <= v.numRange[1];
+                }
                 return Math.random() > 0.5;
             case "float":
                 v.numRange ??= [0, 1];
