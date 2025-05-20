@@ -1,41 +1,43 @@
 import './style.css'
-import typescriptLogo from './typescript.svg'
-import viteLogo from '/vite.svg'
-import { setupCounter } from './counter.ts'
-import { JSONGenerator } from './GenJSON.ts'
+import { JSONGenerator, type IVariable } from './GenJSON.ts'
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="${viteLogo}" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-      <img src="${typescriptLogo}" class="logo vanilla" alt="TypeScript logo" />
-    </a>
-    <h1>Vite + TypeScript</h1>
+  <div>    
     <div class="card">
-      <button id="counter" type="button"></button>
-    </div>
-    <p class="read-the-docs">
-      Click on the Vite and TypeScript logos to learn more
-    </p>
+      <button id="generate" type="button"></button>
+      </div>    
+      <pre id="result"></pre>
   </div>
 `
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+const button = document.querySelector<HTMLButtonElement>('#generate')!
+button.innerText = "Generate";
+
+const result = document.querySelector<HTMLButtonElement>('#result')!
+
+button.addEventListener("click", () => {
+
+  const data = testGeneration();
+
+  const jsonResult = JSON.stringify(data, null, 4);
+  result.innerText = jsonResult;
+});
 
 
-const generator = new JSONGenerator();
-const data = generator.generate([
-  {
-    name: 'Target', type: 'object', count: 2,
-    children: [
-      { name: "Id", type: "unique-int" },
-      { name: "Name", type: "string", numRange: [5, 10] },
-      { name: "description", type: "string", numRange: [20, 50] },
-    ]
-  },
-]);
+// Add your test code here!
+function testGeneration() {
+  const generator = new JSONGenerator();
 
-const jsonResult = JSON.stringify(data, null, 4);
-console.log(jsonResult);
+  const generationData: IVariable[] = [
+    {
+      name: 'Target', type: 'object', count: 20,
+      children: [
+        { name: "Id", type: "unique-int" },
+        { name: "Name", type: "string", numRange: [5, 10] },
+        { name: "description", type: "string", numRange: [20, 50], probability: 0.5 },
+      ]
+    },
+  ];
+
+  return generator.generate(generationData);
+}

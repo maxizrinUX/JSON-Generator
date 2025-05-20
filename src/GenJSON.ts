@@ -1,12 +1,15 @@
 
 export class JSONGenerator {
 
-    private static runningId = 0;
+    private runningId = 0;
 
     public generate(template: IVariable[], indexStart = 0) {
 
         const obj: any = {};
         template.forEach(v => {
+            if (v.probability != undefined && Math.random() < v.probability) {
+                return;
+            }
             if (v.count === undefined) {
                 obj[v.name] = this.genVariable(v, indexStart);
             } else if (typeof (v.count) == "number" || v.count.length == 1) {
@@ -76,7 +79,7 @@ export class JSONGenerator {
                 v.numRange ??= [0, 10];
                 return Math.floor(Math.random() * (v.numRange[1] - v.numRange[0]) + v.numRange[0]);
             case "unique-int":
-                return JSONGenerator.runningId++;
+                return this.runningId++;
             case "date":
                 v.numRange ??= [Date.now(), Date.now() + 1000 * 60 * 60 * 24];
                 return new Date(Math.floor(Math.random() * (v.numRange[1] - v.numRange[0]) + v.numRange[0]));
@@ -92,7 +95,12 @@ type VarType = "int" | "float" | "string" | "unique-int" | "date" | "object" | "
 
 export interface IVariable {
     /** The name of the variable */
-    name: string,
+    name: string;
+    /** The odds of a variable generating at all, for example: a description that only some elements have.
+     * Expected value is between 0 to 1.
+     * <= 0 never generate, >= 1 always generate.
+     */
+    probability?: number;
     /** Type to generate, if values are constant, use setValues instead, if neither are provided, value will be null */
     type?: VarType;
     /** If provided, variable generated will be an array of desired type, or of given values as provided in setValues */
@@ -103,7 +111,7 @@ export interface IVariable {
      * If not provided, integers will generate in range of 0 to 10, float 0 to 1, strings will generate in length 5 to 10, and Date from now to now + 24 hours.
      * For date, the range is in Unix time, milliseconds since 1, 1, 1970.
      */
-    numRange?: number[],
+    numRange?: number[];
     /** Preselected values that will be picked at random to assign to this variable, this overrides variable generation. */
     setValues?: any[];
 }
