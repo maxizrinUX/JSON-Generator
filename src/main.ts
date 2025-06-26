@@ -28,7 +28,38 @@ button.addEventListener("click", () => {
 function testGeneration() {
   const generator = new JSONGenerator();
 
-  const generationData: IVariable[] = [
+  const generationData: IVariable[] = generationData_BitForm();
+
+  return generator.generate(generationData);
+}
+
+function generationData_BitForm(): IVariable[] {
+  return [
+    {
+      name: 'segments', type: 'object', count: 1,
+      children: [
+        { name: "canAdd", type: "bool", numRange: [0, 0.5] },
+        {
+          name: "groups", type: "object", count: 1,
+          children: [
+            {
+              name: "fields", type: "object", count: 1,
+              children: [
+                { name: "name", type: "string" },
+                { name: "type", setValues: ["text", "dropdown"] },
+                { name: "value", type: "method", customMethod: (parent) => parent["type"] == "dropdown" ? 0 : "Test value" },
+                { name: "options", type: "string", probability: (p) => p["type"] == "dropdown", count: 1 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+  ];
+}
+
+function generationData_Debug(): IVariable[] {
+  return [
     {
       name: 'Target', type: 'object', count: 20,
       children: [
@@ -38,6 +69,4 @@ function testGeneration() {
       ]
     },
   ];
-
-  return generator.generate(generationData);
 }

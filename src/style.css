@@ -4,7 +4,7 @@
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(3, 27, 94, 0.87);
+  color: rgba(0, 255, 34, 0.87);
   background-color: #242424;
 
   font-synthesis: none;
@@ -41,7 +41,7 @@ button {
   background-color: #1a1a1a;
   cursor: pointer;
   transition: border-color 0.25s;
-  color: "green"
+  color: "green";
 }
 
 button:hover {
@@ -50,7 +50,7 @@ button:hover {
 
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  /* outline: 4px auto -webkit-focus-ring-color; */
 }
 
 @media (prefers-color-scheme: light) {
