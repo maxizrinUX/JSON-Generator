@@ -3,9 +3,9 @@ export class JSONGenerator {
 
     private runningId = 0;
 
-    public generate(template: IVariable[], indexStart = 0) {
+    public generate(template: IVariable[], indexStart = 0, parent?: MyObject) {
 
-        const obj: any = {};
+        const obj: MyObject = { getParent: () => parent };
         template.forEach(v => {
             // Check if this variable is to be generated at all.
             if (v.probability) {
@@ -41,7 +41,7 @@ export class JSONGenerator {
         return obj;
     }
 
-    private genVariable(v: IVariable, iteration: number, parentObject: any) {
+    private genVariable(v: IVariable, iteration: number, parentObject?: MyObject | undefined) {
         if (v.setValues) {
             return v.setValues[Math.floor(Math.random() * v.setValues.length)];
         }
@@ -73,10 +73,8 @@ export class JSONGenerator {
                 res += firstLast;
                 return res;
             case "object":
-                if (v.children && v.children.length > 0)
-                    return this.generate(v.children, iteration);
-                else
-                    return {};
+                const obj: MyObject = this.generate(v.children ?? [], iteration, parentObject);
+                return obj;
             case "bool":
                 const rand = Math.random();
                 if (v.numRange) {
@@ -130,13 +128,18 @@ export interface IVariable {
      * For boolean, values will be tested against a random number from 0 to 1 to determine if value should be true.
      */
     numRange?: number[];
-    /** Preselected values that will be picked at random to assign to this variable, this overrides variable generation. */
+    /** Predetermined values that will be picked at random to assign to this variable, this overrides variable generation. */
     setValues?: any[];
     /** A custom method to generate whatever is desired, will be invoked when type is set to "method".
      * Input parameter is the parent object currently being built.
      * Will generate null if not provided.
      * NOTE: Variables are built in the order they are provided in the meta data, so be careful not to rely on the presence of variables that aren't generated yet.
      */
-    customMethod?: (parentObject: any) => (any);
+    customMethod?: (parentObject?: MyObject) => (any);
 }
 
+interface IHasParent {
+    getParent(): MyObject | undefined;
+}
+
+type MyObject = IHasParent & { [id: string]: any; }
