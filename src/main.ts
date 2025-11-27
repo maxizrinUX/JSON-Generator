@@ -5,38 +5,196 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>    
     <div class="card">
       <button id="generate" type="button"></button>
+      <button id="copy" type="button"></button>
       </div>    
       <pre id="result"></pre>
   </div>
 `
 
-const button = document.querySelector<HTMLButtonElement>('#generate')!
-button.innerText = "Generate";
+const buttonGen = document.querySelector<HTMLButtonElement>('#generate')!
+const buttonCpy = document.querySelector<HTMLButtonElement>('#copy')!
+buttonGen.innerText = "Generate";
+buttonCpy.innerText = "Copy to clipboard";
 
 const result = document.querySelector<HTMLButtonElement>('#result')!
-
-button.addEventListener("click", () => {
-
+buttonCpy.addEventListener("click", () => {
   const data = testGeneration();
-
+  const jsonResult = JSON.stringify(data, null, 4);
+  navigator.clipboard.writeText(jsonResult);
+});
+buttonGen.addEventListener("click", () => {
+  const data = testGeneration();
   const jsonResult = JSON.stringify(data, null, 4);
   result.innerText = jsonResult;
 });
-
 
 // Add your test code here!
 function testGeneration() {
   const generator = new JSONGenerator();
 
-  const generationData: IVariable[] = generationData_BitForm();
+  const generationData: IVariable[] = generationData_CNC_M();
 
   return generator.generate(generationData);
+}
+
+function generationData_CNC_M(): IVariable[] {
+
+  const quantities = {
+    bits: [15],
+    devices1: [1, 20],
+    devices2: [1, 20],
+    devices3: [0, 16],
+    measured: [40],
+    frequencies: [20]
+  }
+
+  // Define station data to keep it consistent across the file.
+  const stations = [{
+    Name: "Station 1",
+    EntityId: 1,
+    IsLocalStation: true
+  }, {
+    Name: "Station 2",
+    EntityId: 2,
+    IsLocalStation: false
+  }];
+
+  let stationIndex = 0;
+  const stationDataMethod = (data: "Name" | "EntityId" | "IsLocalStation", advance = false) => {
+    if (advance) {
+      return () => {
+        const station = stations[stationIndex % stations.length];
+        stationIndex++;
+        return station[data];
+      }
+    } else {
+      return () => {
+        return stations[stationIndex % stations.length][data];
+      }
+    }
+  }
+
+  // Recursive structure for Device.
+  const devices: IVariable = {
+    name: "OrderedDeviceCollection", type: "object", children: [
+      { name: "Index", type: "index" },
+      { name: "Name", type: "string" },
+      { name: "Status", type: "int", numRange: [0, 6] },
+      { name: "ViewType", setValues: [0, 1] },
+      // More devices here.
+    ]
+  };
+
+  // Station Bit, because I P C are all the same.
+  const stationCBit: IVariable = {
+    name: "StationCBit", type: 'object', count: stations.length, children: [
+      { name: "Id", type: "unique-int" },
+      { name: "Type", setValues: ["StationCBit"] },
+      { name: "EntityId", type: "method", customMethod: stationDataMethod("EntityId", true) },
+      { name: "BITProcessStatus", setValues: [0] },
+      { name: "BitType", setValues: [0] },
+      // Tests
+      {
+        name: "BITList", type: "object", count: quantities.bits, children: [
+          { name: "TestId", type: "unique-int" },
+          { name: "Name", type: "string" },
+          { name: "Description", type: "string" },
+          { name: "LastUpdatedAt", setValues: [new Date().toISOString()] },
+          { name: "Status", type: "int", numRange: [0, 6] },
+          { name: "FailureMessage", type: "string" },
+          { name: "MeaningMessage", type: "string" },
+          { name: "IsReadyState", type: "bool" },
+          { name: "SelectableLevel", setValues: [0, 1] },
+          {
+            // Columns
+            ...devices, count: quantities.devices1, children: devices.children?.concat({
+              // Rows
+              ...devices, count: quantities.devices2, children: devices.children?.concat({
+                // Items
+                ...devices, count: quantities.devices3, children: devices.children?.concat({ name: devices.name, setValues: [[]] })
+              })
+            })
+          },
+        ]
+      }
+    ]
+  };
+
+  // Measured Element parameters repeat.
+  const vParameter: IVariable = {
+    name: "vParameter",
+    type: "object",
+    children: [
+      { name: "Id", type: "unique-int", },
+      { name: "ElementId", type: "method", customMethod: (parent) => parent!.getParent()!["Id"] },
+      { name: "ParameterType", setValues: ["V"] },
+      { name: "Active", type: "bool", },
+      { name: "TestStatus", type: "int", numRange: [0, 6] },
+    ]
+  }
+  const hParameter: IVariable = {
+    ...vParameter,
+    name: "hParameter",
+    children: [...vParameter.children!, { name: "ParameterType", setValues: ["H"] }]
+  };
+
+  return [
+    {
+      name: "Configuration", type: "object", count: 1, children: [
+        { name: "Id", type: "unique-int" },
+        { name: "IsLocalStationMode", type: "method", customMethod: stationDataMethod("IsLocalStation") },
+        { name: "Name", type: "method", customMethod: stationDataMethod("Name") },
+        { name: "StationId", type: "method", customMethod: stationDataMethod("EntityId", true) },
+        { name: "StationType", type: "method", customMethod: (parent) => parent && parent["IsLocalStationMode"] ? "LM" : "Broker" },
+        { name: "LastUpdatedAt", setValues: [new Date().toISOString()] },
+        {
+          name: "CustomFieldsForSingleBitView", setValues: [
+            [
+              "Name",
+              "Description",
+              "Status",
+              "FailureMessage",
+              "MeaningMessage"
+            ]
+          ]
+        },
+      ]
+    },
+    {
+      name: "Stations", type: "object", count: stations.length, children: [
+        { name: "Id", type: "unique-int" },
+        { name: "Name", type: "method", customMethod: stationDataMethod("Name") },
+        { name: "State", setValues: ["Maintenance"] },
+        { name: "Type", setValues: ["Station"] },
+        { name: "EntityId", type: "method", customMethod: stationDataMethod("EntityId", true) },
+      ]
+    },
+    stationCBit,
+    { ...stationCBit, name: "StationIBit", children: stationCBit.children?.concat({ name: "Type", setValues: ["StationIBit"] }) },
+    { ...stationCBit, name: "StationPBit", children: stationCBit.children?.concat({ name: "Type", setValues: ["StationPBit"] }) },
+    {
+      name: "MeasuredElements", type: "object", count: quantities.measured, children: [
+        { name: "Id", type: "index" },
+        { name: "name", type: "string" },
+        hParameter,
+        vParameter
+      ]
+    },
+    {
+      name: "Frequency", type: "object", count: quantities.frequencies, children: [
+        { name: "Id", type: 'index' },
+        { name: "Type", setValues: ["Frequency"] },
+        { name: "Value", type: "index" },
+        { name: "AdditionalInfo", type: "string" },
+      ]
+    },
+  ];
 }
 
 function generationData_BitForm(): IVariable[] {
   return [
     {
-      name: 'segments', type: 'object', count: 1,
+      name: 'segments', type: 'object', count: [3, 5],
       children: [
         { name: "canAdd", type: "bool", numRange: [0, 0.5] },
         {
@@ -47,7 +205,7 @@ function generationData_BitForm(): IVariable[] {
               children: [
                 { name: "name", type: "string" },
                 { name: "type", setValues: ["text", "dropdown"] },
-                { name: "value", type: "method", customMethod: (parent) => parent["type"] == "dropdown" ? 0 : "Test value" },
+                { name: "value", type: "method", customMethod: (parent) => parent!["type"] == "dropdown" ? 0 : "Test value" },
                 { name: "options", type: "string", probability: (p) => p["type"] == "dropdown", count: 1 }
               ]
             }
