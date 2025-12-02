@@ -1,3 +1,4 @@
+import { Guid } from "guid-typescript";
 
 export class JSONGenerator {
 
@@ -92,6 +93,8 @@ export class JSONGenerator {
             case "date":
                 v.numRange ??= [Date.now(), Date.now() + 1000 * 60 * 60 * 24];
                 return new Date(Math.floor(Math.random() * (v.numRange[1] - v.numRange[0]) + v.numRange[0]));
+            case "guid":
+                return Guid.create().toString();
             case "index":
                 return iteration;
             case "method":
@@ -104,7 +107,7 @@ export class JSONGenerator {
     }
 }
 
-type VarType = "int" | "float" | "string" | "unique-int" | "date" | "object" | "bool" | "index" | "method";
+type VarType = "int" | "float" | "string" | "unique-int" | "date" | "object" | "bool" | "index" | "method" | "guid";
 
 export interface IVariable {
     /** The name of the variable */

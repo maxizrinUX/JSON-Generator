@@ -1,5 +1,6 @@
 import './style.css'
 import { JSONGenerator, type IVariable } from './GenJSON.ts'
+import { Guid } from 'guid-typescript'
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>    
@@ -51,11 +52,11 @@ function generationData_CNC_M(): IVariable[] {
   // Define station data to keep it consistent across the file.
   const stations = [{
     Name: "Station 1",
-    EntityId: 1,
+    EntityId: Guid.create().toString(),
     IsLocalStation: true
   }, {
     Name: "Station 2",
-    EntityId: 2,
+    EntityId: Guid.create().toString(),
     IsLocalStation: false
   }];
 
@@ -89,7 +90,7 @@ function generationData_CNC_M(): IVariable[] {
   // Station Bit, because I P C are all the same.
   const stationCBit: IVariable = {
     name: "StationCBit", type: 'object', count: stations.length, children: [
-      { name: "Id", type: "unique-int" },
+      { name: "Id", type: "guid" },
       { name: "EntityId", type: "method", customMethod: stationDataMethod("EntityId", true) },
       { name: "BITProcessStatus", setValues: [0] },
       { name: "BitType", setValues: [0] },
@@ -139,7 +140,13 @@ function generationData_CNC_M(): IVariable[] {
     children: [...vParameter.children!, { name: "ParameterType", setValues: ["H"] }]
   };
 
+  // MARK: CNC M Vars
   return [
+    {
+      name: "User", type: "object", children: [
+        { name: "username", setValues: ["Israel Israeli"] }
+      ]
+    },
     {
       name: "Configuration", type: "object", count: 1, children: [
         { name: "Id", type: "unique-int" },
@@ -165,6 +172,7 @@ function generationData_CNC_M(): IVariable[] {
         { name: "Id", type: "unique-int" },
         { name: "Name", type: "method", customMethod: stationDataMethod("Name") },
         { name: "State", setValues: ["Maintenance"] },
+        { name: "Type", setValues: ["Station"] },
         { name: "EntityId", type: "method", customMethod: stationDataMethod("EntityId", true) },
       ]
     },
@@ -184,6 +192,7 @@ function generationData_CNC_M(): IVariable[] {
       name: "Frequency", type: "object", count: quantities.frequencies, children: [
         { name: "Id", type: 'index' },
         { name: "Name", type: "index" },
+        { name: "Type", setValues: ["Frequency"] },
         { name: "Description", type: "string" },
         { name: "Status", setValues: ["idle"] },
         { name: "LastTestedAt", setValues: [new Date().toISOString()], probability: 0.5 }
