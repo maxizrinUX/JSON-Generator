@@ -40,7 +40,7 @@ function testGeneration() {
 function generationData_CNC_M(): IVariable[] {
 
   const quantities = {
-    bits: [15],
+    bits: [5, 15],
     devices1: [1, 20],
     devices2: [1, 20],
     devices3: [0, 16],
@@ -81,6 +81,7 @@ function generationData_CNC_M(): IVariable[] {
       { name: "Name", type: "string" },
       { name: "Status", type: "int", numRange: [0, 6] },
       { name: "ViewType", setValues: [0, 1] },
+      { name: "LastUpdatedAt", setValues: [new Date().toISOString()], probability: 0.5 }
       // More devices here.
     ]
   };
@@ -89,7 +90,6 @@ function generationData_CNC_M(): IVariable[] {
   const stationCBit: IVariable = {
     name: "StationCBit", type: 'object', count: stations.length, children: [
       { name: "Id", type: "unique-int" },
-      { name: "Type", setValues: ["StationCBit"] },
       { name: "EntityId", type: "method", customMethod: stationDataMethod("EntityId", true) },
       { name: "BITProcessStatus", setValues: [0] },
       { name: "BitType", setValues: [0] },
@@ -99,7 +99,8 @@ function generationData_CNC_M(): IVariable[] {
           { name: "TestId", type: "unique-int" },
           { name: "Name", type: "string" },
           { name: "Description", type: "string" },
-          { name: "LastUpdatedAt", setValues: [new Date().toISOString()] },
+          { name: "LastUpdatedAt", setValues: [new Date().toISOString()], probability: 0.5 },
+          { name: "LastTestedAt", setValues: [new Date().toISOString()], probability: 0.5 },
           { name: "Status", type: "int", numRange: [0, 6] },
           { name: "FailureMessage", type: "string" },
           { name: "MeaningMessage", type: "string" },
@@ -146,7 +147,6 @@ function generationData_CNC_M(): IVariable[] {
         { name: "Name", type: "method", customMethod: stationDataMethod("Name") },
         { name: "StationId", type: "method", customMethod: stationDataMethod("EntityId", true) },
         { name: "StationType", type: "method", customMethod: (parent) => parent && parent["IsLocalStationMode"] ? "LM" : "Broker" },
-        { name: "LastUpdatedAt", setValues: [new Date().toISOString()] },
         {
           name: "CustomFieldsForSingleBitView", setValues: [
             [
@@ -165,13 +165,13 @@ function generationData_CNC_M(): IVariable[] {
         { name: "Id", type: "unique-int" },
         { name: "Name", type: "method", customMethod: stationDataMethod("Name") },
         { name: "State", setValues: ["Maintenance"] },
-        { name: "Type", setValues: ["Station"] },
         { name: "EntityId", type: "method", customMethod: stationDataMethod("EntityId", true) },
       ]
     },
     stationCBit,
-    { ...stationCBit, name: "StationIBit", children: stationCBit.children?.concat({ name: "Type", setValues: ["StationIBit"] }) },
-    { ...stationCBit, name: "StationPBit", children: stationCBit.children?.concat({ name: "Type", setValues: ["StationPBit"] }) },
+    { ...stationCBit, name: "StationIBit" },
+    { ...stationCBit, name: "StationPBit" },
+    { ...stationCBit, name: "StationMaintenance" },
     {
       name: "MeasuredElements", type: "object", count: quantities.measured, children: [
         { name: "Id", type: "index" },
@@ -183,9 +183,10 @@ function generationData_CNC_M(): IVariable[] {
     {
       name: "Frequency", type: "object", count: quantities.frequencies, children: [
         { name: "Id", type: 'index' },
-        { name: "Type", setValues: ["Frequency"] },
-        { name: "Value", type: "index" },
-        { name: "AdditionalInfo", type: "string" },
+        { name: "Name", type: "index" },
+        { name: "Description", type: "string" },
+        { name: "Status", setValues: ["idle"] },
+        { name: "LastTestedAt", setValues: [new Date().toISOString()], probability: 0.5 }
       ]
     },
   ];
