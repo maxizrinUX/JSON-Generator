@@ -40,13 +40,37 @@ function testGeneration() {
 
 function generationData_CNC_M(): IVariable[] {
 
-  const quantities = {
+  const quantitiesProd = {
     bits: [5, 15],
     devices1: [1, 20],
     devices2: [1, 20],
     devices3: [0, 16],
     measured: [40],
     frequencies: [20]
+  }
+
+  const quantitiesDebug = {
+    bits: [1],
+    devices1: [1, 2],
+    devices2: [1, 2],
+    devices3: [1, 2],
+    measured: [4],
+    frequencies: [20]
+  }
+
+  const quantities = quantitiesDebug;
+
+  const entityTypes = {
+    station: "/esmt/entities/StationDetails",
+    pBit: "/esmt/entities/StationPBit",
+    cBit: "/esmt/entities/StationCBit",
+    iBit: "/esmt/entities/StationIBit",
+    mBit: "/esmt/entities/StationMaintenance",
+    singleBit: "SingleBit",
+    device: "Device",
+    measurement: "MeasuredElements",
+    parameter: "Parameter",
+    frequency: "Frequency"
   }
 
   // Define station data to keep it consistent across the file.
@@ -80,6 +104,7 @@ function generationData_CNC_M(): IVariable[] {
     name: "OrderedDeviceCollection", type: "object", children: [
       { name: "Index", type: "index" },
       { name: "Name", type: "string" },
+      { name: "Type", setValues: [entityTypes.device] },
       { name: "Status", type: "int", numRange: [0, 6] },
       { name: "ViewType", setValues: [0, 1] },
       { name: "LastUpdatedAt", setValues: [new Date().toISOString()], probability: 0.5 }
@@ -92,6 +117,7 @@ function generationData_CNC_M(): IVariable[] {
     name: "StationCBit", type: 'object', count: stations.length, children: [
       { name: "Id", type: "guid" },
       { name: "EntityId", type: "method", customMethod: stationDataMethod("EntityId", true) },
+      { name: "Type", setValues: [entityTypes.cBit] },
       { name: "BITProcessStatus", setValues: [0] },
       { name: "BitType", setValues: [0] },
       // Tests
@@ -99,6 +125,7 @@ function generationData_CNC_M(): IVariable[] {
         name: "BITList", type: "object", count: quantities.bits, children: [
           { name: "TestId", type: "unique-int" },
           { name: "Name", type: "string" },
+          { name: "Type", setValues: [entityTypes.singleBit] },
           { name: "Description", type: "string" },
           { name: "LastUpdatedAt", setValues: [new Date().toISOString()], probability: 0.5 },
           { name: "LastTestedAt", setValues: [new Date().toISOString()], probability: 0.5 },
@@ -128,6 +155,7 @@ function generationData_CNC_M(): IVariable[] {
     type: "object",
     children: [
       { name: "Id", type: "unique-int", },
+      { name: "Type", setValues: [entityTypes.parameter] },
       { name: "ElementId", type: "method", customMethod: (parent) => parent!.getParent()!["Id"] },
       { name: "ParameterType", setValues: ["V"] },
       { name: "Active", type: "bool", },
@@ -172,68 +200,31 @@ function generationData_CNC_M(): IVariable[] {
         { name: "Id", type: "unique-int" },
         { name: "Name", type: "method", customMethod: stationDataMethod("Name") },
         { name: "State", setValues: ["Maintenance"] },
-        { name: "Type", setValues: ["Station"] },
+        { name: "Type", setValues: [entityTypes.station] },
         { name: "EntityId", type: "method", customMethod: stationDataMethod("EntityId", true) },
       ]
     },
     stationCBit,
-    { ...stationCBit, name: "StationIBit" },
-    { ...stationCBit, name: "StationPBit" },
-    { ...stationCBit, name: "StationMaintenance" },
+    { ...stationCBit, name: "StationIBit", children: stationCBit.children?.concat({ name: "Type", setValues: [entityTypes.iBit] },) },
+    { ...stationCBit, name: "StationPBit", children: stationCBit.children?.concat({ name: "Type", setValues: [entityTypes.pBit] },) },
+    { ...stationCBit, name: "StationMaintenance", children: stationCBit.children?.concat({ name: "Type", setValues: [entityTypes.mBit] },) },
     {
       name: "MeasuredElements", type: "object", count: quantities.measured, children: [
         { name: "Id", type: "index" },
         { name: "name", type: "string" },
+        { name: "Type", setValues: [entityTypes.measurement] },
         hParameter,
         vParameter
       ]
     },
     {
       name: "Frequency", type: "object", count: quantities.frequencies, children: [
-        { name: "Id", type: 'index' },
-        { name: "Name", type: "index" },
-        { name: "Type", setValues: ["Frequency"] },
+        { name: "Id", type: 'guid' },
+        { name: "Name", type: "string" },
+        { name: "Type", setValues: [entityTypes.frequency] },
         { name: "Description", type: "string" },
         { name: "Status", setValues: ["idle"] },
         { name: "LastTestedAt", setValues: [new Date().toISOString()], probability: 0.5 }
-      ]
-    },
-  ];
-}
-
-function generationData_BitForm(): IVariable[] {
-  return [
-    {
-      name: 'segments', type: 'object', count: [3, 5],
-      children: [
-        { name: "canAdd", type: "bool", numRange: [0, 0.5] },
-        {
-          name: "groups", type: "object", count: 1,
-          children: [
-            {
-              name: "fields", type: "object", count: 1,
-              children: [
-                { name: "name", type: "string" },
-                { name: "type", setValues: ["text", "dropdown"] },
-                { name: "value", type: "method", customMethod: (parent) => parent!["type"] == "dropdown" ? 0 : "Test value" },
-                { name: "options", type: "string", probability: (p) => p["type"] == "dropdown", count: 1 }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-  ];
-}
-
-function generationData_Debug(): IVariable[] {
-  return [
-    {
-      name: 'Target', type: 'object', count: 20,
-      children: [
-        { name: "Id", type: "unique-int" },
-        { name: "Name", type: "string", numRange: [5, 10] },
-        { name: "description", type: "string", numRange: [20, 50], probability: 0.5 },
       ]
     },
   ];
